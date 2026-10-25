@@ -125,10 +125,17 @@ class ActionExecutor(
   fun tap(el: UiElement, before: ScreenSnapshot): String {
     if (!el.node.refresh() || !el.node.isVisibleToUser) throw TaskFailed("\"${el.label}\" is no longer on screen.")
     click(el.node)
-    val changed = settle(before.fingerprint)
-    return if (changed) "tapped \"${el.label}\", the screen changed"
-    else "tapped \"${el.label}\", but nothing visibly changed"
+    if (settle(before.fingerprint)) return "tapped \"${el.label}\", the screen changed"
+    // Web content (Chrome, in-app browsers) often ignores accessibility clicks; a real touch works.
+    tapAt(el.node)
+    sleep(300)
+    return if (settle(before.fingerprint)) "tapped \"${el.label}\", the screen changed"
+    else "tapped \"${el.label}\", but nothing changed. Don't tap it again; try something else"
   }
+
+  /** Whether typing into [el] really means "search for this" (search box or browser address bar). */
+  fun isSearchBox(el: UiElement): Boolean =
+    el.node.isEditable && SEARCH_WORDS.any { ScreenReader.label(el.node).contains(it) }
 
   fun type(el: UiElement, text: String, before: ScreenSnapshot): String {
     if (!el.node.refresh()) throw TaskFailed("That text box is no longer on screen.")

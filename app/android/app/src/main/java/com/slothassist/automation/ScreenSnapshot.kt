@@ -25,13 +25,12 @@ class ScreenSnapshot private constructor(
   val fingerprint: Int,
 ) {
 
-  fun describe(): String = buildString {
+  fun describe(limit: Int = elements.size): String = buildString {
     append("Current app: ").append(packageName).append('\n')
     append("Screen").append(if (scrollable) " (scrollable, more may be below)" else "").append(":\n")
     if (elements.isEmpty()) append("(nothing readable on screen)\n")
-    for (e in elements) {
+    for (e in elements.take(limit)) {
       append('[').append(e.id).append("] ").append(e.kind).append(" \"").append(e.label).append('"')
-      append(" @").append(e.bounds.centerX()).append(',').append(e.bounds.centerY())
       if (e.node.isChecked) append(" checked")
       if (e.node.isSelected) append(" selected")
       if (e.node.isFocused && e.node.isEditable) append(" focused")
@@ -40,8 +39,9 @@ class ScreenSnapshot private constructor(
   }
 
   companion object {
-    private const val MAX_ELEMENTS = 80
-    private const val MAX_LABEL = 90
+    // Every element costs prompt tokens, and prefill dominates on-device latency.
+    private const val MAX_ELEMENTS = 50
+    private const val MAX_LABEL = 60
 
     fun capture(root: AccessibilityNodeInfo): ScreenSnapshot {
       val found = ArrayList<Triple<AccessibilityNodeInfo, String, String>>()

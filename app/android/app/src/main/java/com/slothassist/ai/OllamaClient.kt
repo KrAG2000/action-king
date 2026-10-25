@@ -9,17 +9,17 @@ import java.net.URL
 /** The model server couldn't be used at all (as opposed to giving a bad answer). */
 class ModelUnavailable(message: String) : Exception(message)
 
-/** Minimal blocking client for Ollama's /api/chat with JSON-schema constrained output. */
-class OllamaClient(private val config: AgentConfig) {
+/** Ollama on another machine (laptop over USB/LAN) via /api/chat with JSON-schema constrained output. */
+class OllamaClient(private val config: AgentConfig) : ChatModel {
 
   @Volatile private var active: HttpURLConnection? = null
 
   /** Cancels an in-flight request from another thread (FR-070). */
-  fun abort() {
+  override fun abort() {
     active?.disconnect()
   }
 
-  fun chat(system: String, user: String, schema: JSONObject): JSONObject {
+  override fun chat(system: String, user: String, schema: JSONObject, compactRegex: String?): JSONObject {
     val body = JSONObject()
       .put("model", config.model)
       .put("stream", false)

@@ -1,2 +1,6 @@
 *.apk
 .DS_Store
+# Model weights are copied to the phone separately, never committed
+*.litertlm
+*.task
+*.gguf

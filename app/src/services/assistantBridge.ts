@@ -8,18 +8,21 @@ export type CapabilityStatus = {
   notifications: boolean;
 };
 
-export type AgentConfig = { serverUrl: string; model: string };
+export type Provider = 'ON_DEVICE' | 'OLLAMA';
 
-export type ModelCheck = {
-  reachable: boolean;
-  modelInstalled: boolean;
-  models?: string[];
-  error?: string;
+export type AgentConfig = {
+  provider: Provider;
+  modelPath: string;
+  modelFileExists: boolean;
+  serverUrl: string;
+  model: string;
 };
+
+export type ModelCheck = { ok: boolean; message: string };
 
 type NativeBridge = {
   getAgentConfig(): Promise<AgentConfig>;
-  setAgentConfig(serverUrl: string, model: string): void;
+  setAgentConfig(provider: Provider, serverUrl: string, model: string): void;
   testModel(): Promise<ModelCheck>;
   getStatus(): Promise<Omit<CapabilityStatus, 'notifications'>>;
   openOverlaySettings(): void;
@@ -56,5 +59,6 @@ export const openAppSettings = () => native.openAppSettings();
 export const startBubble = () => native.startBubble();
 export const stopBubble = () => native.stopBubble();
 export const getAgentConfig = () => native.getAgentConfig();
-export const setAgentConfig = (c: AgentConfig) => native.setAgentConfig(c.serverUrl, c.model);
+export const setAgentConfig = (c: AgentConfig) =>
+  native.setAgentConfig(c.provider, c.serverUrl, c.model);
 export const testModel = () => native.testModel();

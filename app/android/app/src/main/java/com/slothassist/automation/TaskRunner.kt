@@ -5,8 +5,9 @@ import android.os.Looper
 import android.util.Log
 import com.slothassist.ai.AgentConfig
 import com.slothassist.ai.AgentPlanner
+import com.slothassist.ai.ChatModel
+import com.slothassist.ai.GemmaOnDevice
 import com.slothassist.ai.ModelUnavailable
-import com.slothassist.ai.OllamaClient
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -25,7 +26,7 @@ object TaskRunner {
   private val main = Handler(Looper.getMainLooper())
   private val cancelFlag = AtomicBoolean(false)
   @Volatile private var running = false
-  @Volatile private var client: OllamaClient? = null
+  @Volatile private var client: ChatModel? = null
 
   /** Set while the agent is waiting for the user's answer; the next command is treated as that answer. */
   private var pending: Pair<String, String>? = null
@@ -62,8 +63,9 @@ object TaskRunner {
         cancelled = { cancelFlag.get() || System.currentTimeMillis() > deadline },
         status = { publish(TaskStatus(TaskStatus.State.RUNNING, it)) },
       )
-      val ollama = OllamaClient(AgentConfig.load(svc)).also { client = it }
-      val loop = AgentLoop(goal, AgentPlanner(ollama), exec) { publish(TaskStatus(TaskStatus.State.RUNNING, it)) }
+      val model = AgentConfig.load(svc).createModel(svc).also { client = it }
+      (model as? GemmaOnDevice)?.onLoading = { publish(TaskStatus(TaskStatus.State.RUNNING, it)) }
+      val loop = AgentLoop(goal, AgentPlanner(model), exec) { publish(TaskStatus(TaskStatus.State.RUNNING, it)) }
       val started = System.currentTimeMillis()
 
       val result = try {

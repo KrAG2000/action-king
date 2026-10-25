@@ -9,10 +9,12 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.slothassist.ai.AgentConfig
+import com.slothassist.ai.GemmaOnDevice
 import com.slothassist.ai.ModelUnavailable
 import com.slothassist.ai.OllamaClient
 import com.slothassist.automation.AssistantAccessibilityService
 import com.slothassist.overlay.FloatingOverlayService
+import java.io.File
 
 /** What the React Native screens need from the native side: permission status and the bubble switch. */
 class AssistantBridgeModule(private val ctx: ReactApplicationContext) : ReactContextBaseJavaModule(ctx) {
@@ -63,36 +65,46 @@ class AssistantBridgeModule(private val ctx: ReactApplicationContext) : ReactCon
   fun getAgentConfig(promise: Promise) {
     val c = AgentConfig.load(ctx)
     promise.resolve(Arguments.createMap().apply {
+      putString("provider", c.provider.name)
+      putString("modelPath", c.modelPath)
+      putBoolean("modelFileExists", File(c.modelPath).exists())
       putString("serverUrl", c.serverUrl)
       putString("model", c.model)
     })
   }
 
   @ReactMethod
-  fun setAgentConfig(serverUrl: String, model: String) {
-    AgentConfig.save(ctx, AgentConfig(serverUrl, model))
+  fun setAgentConfig(provider: String, serverUrl: String, model: String) {
+    val current = AgentConfig.load(ctx)
+    AgentConfig.save(ctx, current.copy(provider = AgentConfig.Provider.valueOf(provider), serverUrl = serverUrl, model = model))
   }
 
-  /** Checks the server is reachable and the chosen model is installed. Resolves with installed model names. */
+  /**
+   * On-device: loads Gemma and runs a tiny prompt. Ollama: checks the server and that the model is installed.
+   * Resolves with { ok, message }.
+   */
   @ReactMethod
   fun testModel(promise: Promise) {
     Thread {
       val config = AgentConfig.load(ctx)
-      try {
-        val models = OllamaClient(config).listModels()
-        val installed = models.any { it == config.model || it == "${config.model}:latest" }
-        promise.resolve(Arguments.createMap().apply {
-          putBoolean("reachable", true)
-          putBoolean("modelInstalled", installed)
-          putArray("models", Arguments.fromList(models))
-        })
+      val (ok, message) = try {
+        when (config.provider) {
+          AgentConfig.Provider.ON_DEVICE -> true to GemmaOnDevice.get(ctx, File(config.modelPath)).warmUp()
+          AgentConfig.Provider.OLLAMA -> {
+            val models = OllamaClient(config).listModels()
+            if (models.any { it == config.model || it == "${config.model}:latest" }) true to "Connected ✓ ${config.model} is ready."
+            else false to "Connected, but \"${config.model}\" isn't installed. Available: ${models.joinToString().ifEmpty { "none" }}"
+          }
+        }
       } catch (e: ModelUnavailable) {
-        promise.resolve(Arguments.createMap().apply {
-          putBoolean("reachable", false)
-          putBoolean("modelInstalled", false)
-          putString("error", e.message)
-        })
+        false to (e.message ?: "The model isn't available.")
+      } catch (e: Exception) {
+        false to "Model test failed: ${e.message}"
       }
+      promise.resolve(Arguments.createMap().apply {
+        putBoolean("ok", ok)
+        putString("message", message)
+      })
     }.start()
   }
 

@@ -110,6 +110,8 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    // On-device Gemma (same runtime as Google AI Edge Gallery)
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

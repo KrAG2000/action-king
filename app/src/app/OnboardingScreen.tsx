@@ -147,7 +147,7 @@ export function OnboardingScreen() {
       <Text style={styles.section}>What it can see</Text>
       <Text style={styles.cardBody}>
         Only the app on screen, only while a task runs. Screen contents and your commands go only to the
-        open-weight model on your own computer — never to a cloud AI. Secure screens, logins, CAPTCHAs and payments are always
+        open-weight model on this phone (or your own computer) — never to a cloud AI. Secure screens, logins, CAPTCHAs and payments are always
         left to you.
       </Text>
     </ScrollView>
