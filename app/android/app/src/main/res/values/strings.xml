@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SlothAssist</string>
+    <string name="accessibility_label">SlothAssist screen helper</string>
+    <string name="accessibility_description">Lets SlothAssist read the app you are currently using and tap, type, scroll and search on your behalf when you give it a command. It only acts when you start a task from the floating bubble, and it never completes payments or purchases.</string>
+</resources>

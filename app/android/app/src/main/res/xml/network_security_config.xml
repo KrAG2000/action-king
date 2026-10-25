@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The model server is Ollama on the user's own machine (USB via adb reverse, or the home LAN),
+     which speaks plain HTTP. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
