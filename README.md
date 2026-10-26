@@ -27,7 +27,7 @@ The latest build (self-verifying shopping skills, wait-for-render, top-layer-onl
 - **`ACTION_CLICK` is often ignored by web content** (Chrome). There's a touch-gesture fallback.
 - **Test runs modify real carts.** It never checks out or pays, but it can add items.
 
-Suggestions from Android developers are very welcome. See the questions at the end of [POST.md](POST.md).
+Suggestions from Android developers are very welcome: open an issue.
 
 ## Getting started
 
