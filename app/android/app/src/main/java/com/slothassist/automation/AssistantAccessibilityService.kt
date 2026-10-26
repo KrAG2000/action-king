@@ -8,7 +8,7 @@ import android.view.accessibility.AccessibilityEvent
 
 /**
  * The service Android binds once the user enables it in Accessibility settings.
- * It holds no logic of its own; [ActionExecutor] drives it while a task runs.
+ * [ActionExecutor] drives it while a task runs; its event stream feeds [EventJournal].
  */
 class AssistantAccessibilityService : AccessibilityService() {
 
@@ -16,7 +16,9 @@ class AssistantAccessibilityService : AccessibilityService() {
     instance = this
   }
 
-  override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+  override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+    event?.let { EventJournal.record(it, packageName) }
+  }
 
   override fun onInterrupt() {
     TaskRunner.cancel()

@@ -22,7 +22,7 @@ class TaskState(val goal: String, val checklist: List<String>) {
   }
 
   fun record(entry: String) {
-    log += entry
+    log += if (entry.length > MAX_ENTRY) entry.take(MAX_ENTRY) + "…" else entry
   }
 
   fun render(): String = buildString {
@@ -43,7 +43,8 @@ class TaskState(val goal: String, val checklist: List<String>) {
   }
 
   companion object {
-    private const val MAX_LOG = 14
+    private const val MAX_LOG = 10
+    private const val MAX_ENTRY = 180
   }
 }
 
@@ -58,16 +59,24 @@ object TargetResolver {
     "close" to listOf("close", "dismiss", "×", "✕", "x"),
   )
 
-  fun resolve(target: String, nth: Int, screen: ScreenSnapshot): UiElement? {
+  /**
+   * [planned] is the screen the model was looking at. A bare number ("10", "[10]") means that element
+   * number, which only holds while the screen hasn't changed since.
+   */
+  fun resolve(target: String, nth: Int, screen: ScreenSnapshot, planned: ScreenSnapshot): UiElement? {
     val t = normalize(target)
     if (t.isEmpty()) return null
+    NUMBER.matchEntire(t)?.let { m ->
+      if (screen.fingerprint != planned.fingerprint) return null
+      return screen.elements.getOrNull(m.groupValues[1].toInt())
+    }
     val alts = SYNONYMS[t] ?: listOf(t)
     val labelled = screen.elements.map { it to normalize(it.label) }
 
     // Best match tier wins: exact label, then starts with, then contains. Interactive elements before plain text.
     val tiers = listOf<(String) -> Boolean>(
       { l -> alts.any { l == it } },
-      { l -> alts.any { (it.length >= 3 || !it[0].isLetter()) && l.startsWith(it) } },
+      { l -> alts.any { (it.length >= 3 || !it[0].isLetterOrDigit()) && l.startsWith(it) } },
       { l -> alts.any { it.length >= 3 && l.contains(it) } },
     )
     for (matches in tiers) {
@@ -77,6 +86,8 @@ object TargetResolver {
     }
     return null
   }
+
+  private val NUMBER = Regex("^\\[?#?(\\d{1,3})\\]?$")
 
   private fun normalize(s: String) = s.lowercase().trim().trim('"', '\'', '.').replace(Regex("\\s+"), " ")
 }

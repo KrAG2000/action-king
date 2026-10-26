@@ -36,6 +36,20 @@ class ActionExecutor(
     return ScreenSnapshot.capture(root).also { Log.d(TAG, it.describe()) }
   }
 
+  /**
+   * Re-reads the screen until [ready] holds (lists that render progressively, steppers that appear
+   * after a tap), up to [timeoutMs]. Returns the last read either way.
+   */
+  fun observeUntil(timeoutMs: Long, ready: (ScreenSnapshot) -> Boolean): ScreenSnapshot {
+    var screen = observe()
+    val end = System.currentTimeMillis() + timeoutMs
+    while (!ready(screen) && System.currentTimeMillis() < end) {
+      sleep(250)
+      screen = observe()
+    }
+    return screen
+  }
+
   /** FR-047: refuse to act if the user switched apps while the planner was thinking. */
   fun guard(expectedPackage: String) {
     val now = rootOrFail().packageName?.toString()
@@ -73,8 +87,11 @@ class ActionExecutor(
         if (ScreenReader.fingerprint(currentRoot()) != before && !stillEditing) true else null
       }
       settle()
-      return if (changed == true) "searched for \"$query\", results are showing"
-      else throw TaskFailed("I submitted \"$query\", but couldn't confirm that results appeared.")
+      if (changed == true) return "searched for \"$query\", results are showing"
+      // Re-running the search already on screen changes nothing; that's fine once we've left the text box.
+      val stillEditing = findSearchField()?.isFocused == true && hasKeyboardOpen()
+      if (!stillEditing) return "searched for \"$query\", results are showing (same as before)"
+      throw TaskFailed("I submitted \"$query\", but couldn't confirm that results appeared.")
     } finally {
       targetPackage = null
     }
@@ -220,6 +237,9 @@ class ActionExecutor(
       throw TaskFailed("I typed \"$text\", but the text box doesn't show it.")
     }
   }
+
+  private fun hasKeyboardOpen(): Boolean =
+    svc.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
   private fun pressEnter(field: AccessibilityNodeInfo): Boolean =
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
